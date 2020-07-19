@@ -379,6 +379,53 @@ test_ ## testnum: \
 #define qNaN 0d:7ff8000000000000
 #define sNaN 0d:7ff0000000000001
 
+#define TEST_POSIT_OP_S_INTERNAL( testnum, flags, result, val1, val2, val3, code... )\
+test_ ## testnum: \
+  li        TESTNUM, testnum; \
+  la        a0, test_ ## testnum ## _data ;\
+  flw       f0, 0(a0); \
+  flw       f1, 4(a0); \
+  flw       f2, 8(a0); \
+  lw        a3, 12(a0); \
+  fcvt.p.s  f3, f0; \
+  fcvt.p.s  f4, f1; \
+  fcvt.p.s  f5, f2; \
+  code; \
+  fcvt.s.p  f3, f5; \
+  fmv.x.s   a0, f3; \
+  fsflags   a1, x0; \
+  li        a2, flags; \
+  bne       a0, a3, fail; \
+  bne       a1, a2, fail; \
+  .pushsection .data; \
+  .align 2; \
+  test_ ## testnum ## _data: \
+  .float val1; \
+  .float val2; \
+  .float val3; \
+  .result; \
+  .popsection
+
+#define TEST_POSIT_LD_ST_INTERNAL( testnum, flags, val1, code... )\
+test_ ## testnum: \
+  li        TESTNUM, testnum; \
+  la        a0, test_ ## testnum ## _data ;\
+  flw       f0, 0(a0); \
+  code; \
+  fmv.x.s   a0, f1; \
+  fmv.x.s   a1, f0; \
+  fsflags   a2, x0; \
+  li        a3, flags; \
+  bne       a0, a1, fail; \
+  bne       a2, a3, fail; \
+  .pushsection .data; \
+  .align 2; \
+  test_ ## testnum ## _data: \
+  .float val1; \
+  .float val1; \
+  .popsection
+
+
 #define TEST_FP_OP_S_INTERNAL( testnum, flags, result, val1, val2, val3, code... ) \
 test_ ## testnum: \
   li  TESTNUM, testnum; \
@@ -489,6 +536,14 @@ test_ ## testnum: \
 #define TEST_FP_OP2_S( testnum, inst, flags, result, val1, val2 ) \
   TEST_FP_OP_S_INTERNAL( testnum, flags, float result, val1, val2, 0.0, \
                     inst f3, f0, f1; fmv.x.s a0, f3)
+
+#define TEST_POSIT_QUIRE_S( testnum, inst, flags, result, val1, val2, val3 ) \
+  TEST_POSIT_OP_S_INTERNAL( testnum, flags, float result, val1, val2, val3, \
+        fcvt.r.p f0, f5; inst f0, f3, f4; inst f0, f3, f4; fcvt.p.r f5, f0)
+
+#define TEST_POSIT_LD_ST( testnum, flags, val1 ) \
+  TEST_POSIT_LD_ST_INTERNAL( testnum, flags, val1, \
+        fcvt.p.s f3, f0; psw f3, 4(a0); plw f2, 4(a0); fcvt.s.p f1, f2)
 
 #define TEST_FP_OP2_D32( testnum, inst, flags, result, val1, val2 ) \
   TEST_FP_OP_D32_INTERNAL( testnum, flags, double result, val1, val2, 0.0, \
